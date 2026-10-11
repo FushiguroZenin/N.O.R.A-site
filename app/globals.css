@@ -115,3 +115,11 @@ html,body{max-width:100%;overflow-x:hidden}img,svg,video,canvas{max-width:100%}i
   .delete-dialog{align-items:end;padding:0}.delete-dialog>div{width:100%;max-height:88dvh;overflow-y:auto;border-left:0;border-right:0;border-bottom:0}.reply-sheet{padding:0;align-items:end}.reply-sheet>div.reply-sheet-panel{width:100%;max-height:90dvh;border-left:0;border-right:0;border-bottom:0}
   .nora-footer{grid-template-columns:1fr;gap:17px}.nora-footer>span{grid-column:auto}.nora-footer nav{gap:10px}
 }
+
+/* N.O.R.A wordmark: the shared rail, page headers, and footer all use it. */
+.logo,.footer-logo{font-size:0!important;letter-spacing:0!important}
+.logo::after{content:"N.O.R.A";font:600 var(--wordmark-size,30px)/1 "DM Sans",Arial,sans-serif;letter-spacing:.17em}
+.footer-logo::after{content:"N.O.R.A";font:600 18px/1 "DM Sans",Arial,sans-serif;letter-spacing:.16em}
+.product-nav .logo,.catalogue-nav .logo{--wordmark-size:25px}
+@media(max-width:900px){.rail .logo{--wordmark-size:23px}.product-nav .logo,.catalogue-nav .logo{--wordmark-size:22px}}
+@media(max-width:520px){.product-nav-start .logo,.catalogue-nav .logo{--wordmark-size:20px}.footer-logo::after{font-size:17px}}
