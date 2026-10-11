@@ -1,0 +1,37 @@
+name: NORA verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: ${{ hashFiles('package.json') != '' }}
+        with:
+          node-version: 22
+      - name: Verify Node application
+        if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run build --if-present
+      - name: Verify vanilla static site
+        if: ${{ hashFiles('package.json') == '' }}
+        run: test -f index.html
+      - name: Report result to NORA
+        if: always()
+        env:
+          NORA_VERIFY_ENDPOINT: ${{ secrets.NORA_VERIFY_ENDPOINT }}
+          NORA_VERIFY_WEBHOOK_SECRET: ${{ secrets.NORA_VERIFY_WEBHOOK_SECRET }}
+          NORA_CONCLUSION: ${{ job.status }}
+          NORA_REPOSITORY: ${{ github.repository }}
+          NORA_COMMIT: ${{ github.sha }}
+        run: |
+          curl --fail-with-body --request POST "$NORA_VERIFY_ENDPOINT" \
+            --header "Content-Type: application/json" \
+            --header "x-nora-verify-secret: $NORA_VERIFY_WEBHOOK_SECRET" \
+            --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"$NORA_CONCLUSION\"}"

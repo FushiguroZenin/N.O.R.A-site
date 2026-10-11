@@ -1,0 +1,3 @@
+create table if not exists public.acquisition_requests (id uuid primary key default gen_random_uuid(), buyer_id uuid not null references public.profiles(id) on delete cascade, product_slug text not null, product_name text not null, delivery text not null, terms_requested text not null, intended_use text not null, organisation text, status text not null check (status in ('sent','in_conversation','acquired','closed')) default 'sent', created_at timestamptz default now(), updated_at timestamptz default now());
+alter table public.acquisition_requests enable row level security;
+create policy "buyers manage own requests" on public.acquisition_requests for all using (auth.uid()=buyer_id) with check (auth.uid()=buyer_id);
