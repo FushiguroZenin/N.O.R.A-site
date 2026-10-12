@@ -44,6 +44,7 @@ The initial curated catalogue includes real work: **Dera 1.6**, **Ruby**, **Nept
 ### Accounts and access
 
 - Passwordless Supabase email authentication using magic links.
+- Live authentication is configured for [nora-marketplace.vercel.app](https://nora-marketplace.vercel.app), with separate local and production redirect URLs in Supabase.
 - Public browsing remains open; saving a draft, submitting work, saving a product, or sending an acquisition request requires sign-in.
 - Signed-out actions redirect to `/account` and return the person to the work they were doing after authentication.
 - `/join` separates the buyer and creator entry points without splitting the marketplace itself.
@@ -67,6 +68,8 @@ The initial curated catalogue includes real work: **Dera 1.6**, **Ruby**, **Nept
 - Publishing makes an approved record publicly discoverable and links it to its creator for request routing.
 - Public GitHub technical-evidence checks for repository structure.
 - `templates/nora-verify.yml` is a reusable GitHub Actions starter workflow. It supports Node projects with a lockfile and simple vanilla sites with an `index.html` entry point.
+- `POST /api/verify` receives a signed workflow result and records a verified or failed build, commit, runtime, timestamp, and summary against the matching creator record.
+- Creator Studio surfaces that verification outcome beside the relevant record, so a creator can act on a failed build rather than discovering it only in GitHub Actions.
 - NORA currently records creator-declared dependency and licence information. It does **not** yet perform a full dependency licence audit, security scan, or private-repository check.
 
 ### Acquisition flow
@@ -103,6 +106,7 @@ The initial curated catalogue includes real work: **Dera 1.6**, **Ruby**, **Nept
 | `/licensing` | Licensing and delivery guide |
 | `/terms` | Marketplace terms framework |
 | `/contact` | Contact handoff |
+| `/api/verify` | Signed GitHub Actions verification-result endpoint |
 
 ## Technical stack
 
@@ -111,8 +115,8 @@ The initial curated catalogue includes real work: **Dera 1.6**, **Ruby**, **Nept
 - Framer Motion
 - Supabase Auth, Postgres, Row Level Security, and Storage
 - GitHub REST API for public repository evidence
+- Vercel for the production Next.js deployment
 - Plain CSS design system with custom properties and responsive media queries
-- Static export configuration for low-cost hosting
 
 ## Project structure
 
@@ -166,9 +170,39 @@ supabase/
   saved-products.sql        # Buyer shortlist
   delete-listing.sql        # Irreversible creator deletion function
   technical-evidence.sql    # Technical evidence fields
+  nora-verify.sql           # Verification state and GitHub Actions output
 
 templates/
   nora-verify.yml           # GitHub Actions verification starter
+```
+
+## Live deployment
+
+The production application is deployed at [nora-marketplace.vercel.app](https://nora-marketplace.vercel.app) from the `main` branch of this repository.
+
+Vercel needs these environment variables in **Production**:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
+NORA_VERIFY_WEBHOOK_SECRET
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` and `NORA_VERIFY_WEBHOOK_SECRET` are server-side secrets. They must never be committed, exposed through a `NEXT_PUBLIC_` variable, or pasted into documentation. A deployment must be redeployed after changing its environment variables.
+
+Supabase Auth is configured with these redirect URLs:
+
+```text
+https://nora-marketplace.vercel.app/account
+http://localhost:3000/account
+```
+
+For GitHub Actions reporting, set repository secrets in each creator repository:
+
+```text
+NORA_VERIFY_ENDPOINT=https://nora-marketplace.vercel.app/api/verify
+NORA_VERIFY_WEBHOOK_SECRET=<same private secret configured in Vercel>
 ```
 
 ## Local development
@@ -207,8 +241,9 @@ The latest creator-listing experience specifically needs:
 - `manual-fulfilment.sql`
 - `buyer-readiness.sql`
 - `proof-environments.sql`
+- `nora-verify.sql`
 
-Set the public Supabase URL and publishable key in the local environment configuration used by `lib/supabase.ts`. Never commit service-role keys.
+Create a local `.env.local` (it is ignored by Git) with the same four variables used by Vercel. Never commit service-role keys or webhook secrets.
 
 ## Current boundaries and next milestone
 
@@ -218,6 +253,7 @@ Not yet implemented:
 
 - checkout, payment processing, creator payouts, invoices, tax handling, or refunds automation;
 - payment-webhook-driven source-bundle fulfilment (private storage, buyer entitlements, and manual reviewer fulfilment already exist);
+- automatic verification execution infrastructure: NORA can receive signed GitHub Actions results, but the creator must still install the workflow and repository secrets;
 - Google/GitHub sign-in and GitHub OAuth for private repository checks;
 - automated lockfile, security, dependency-version, or open-source licence scanning;
 - in-app messaging, notifications, disputes, and a complete audit trail;

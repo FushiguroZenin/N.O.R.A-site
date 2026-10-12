@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccountAuth } from "@/components/account-auth";
 import { AccountOverview } from "@/components/account-overview";
+import { NotificationCentre } from "@/components/notification-centre";
 import { BackButton } from "@/components/back-button";
 import { NoraFooter } from "@/components/nora-footer";
 
@@ -20,7 +21,7 @@ export default function AccountPage() {
       <article><div className="eyebrow">Buyer workspace</div><h2>Find, save, and acquire.</h2><p>Keep acquisition requests together and return to the software that fits what you are building.</p><Link className="primary-link" href="/account/buyer">Open buyer workspace</Link></article>
       <article id="creator"><div className="eyebrow">Creator studio</div><h2>Build a catalogue, not a profile.</h2><p>Keep drafts, submit finished software for review, manage releases, and handle serious buyer interest in one place.</p><Link className="primary-link creator-join" href="/account/creator">Open creator studio</Link></article>
     </section>
-    <section className="account-note"><AccountAuth /><div className="account-workspaces"><AccountOverview /><Link className="review-link" href="/account/review">Reviewer workspace <span>↗</span></Link></div></section>
+    <section className="account-note"><AccountAuth /><div className="account-workspaces"><AccountOverview /><NotificationCentre /></div></section>
     <NoraFooter />
   </main>;
 }

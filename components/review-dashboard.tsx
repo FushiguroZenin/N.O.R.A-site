@@ -14,6 +14,7 @@ type Submission = {
 export function ReviewDashboard() {
   const [records, setRecords] = useState<Submission[]>([]);
   const [enabled, setEnabled] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [note, setNote] = useState("");
   const [returningId, setReturningId] = useState<string>();
   const [feedback, setFeedback] = useState("");
@@ -21,8 +22,8 @@ export function ReviewDashboard() {
   const load = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: profile } = await supabase.from("profiles").select("is_reviewer").eq("id", user.id).maybeSingle();
-    if (!profile?.is_reviewer) return;
+    const { data: profile } = await supabase.from("profiles").select("is_operator").eq("id", user.id).maybeSingle();
+    if (!profile?.is_operator) { setAccessDenied(true); return; }
     setEnabled(true);
     const { data, error } = await supabase.from("listing_drafts").select("id,product_name,product_type,outcome,delivery,preview_url,cover_image_url,gallery_image_urls,demo_url,repository_url,price_mode,price_amount,currency,price_note,included,requirements,boundary,updated_at").eq("status", "submitted").order("updated_at", { ascending: true });
     if (error) setNote(error.message);
@@ -43,9 +44,10 @@ export function ReviewDashboard() {
     if (!error) { setReturningId(undefined); setFeedback(""); load(); }
   };
 
+  if (accessDenied) return <section className="creator-dashboard dashboard-empty"><div className="eyebrow">Operations</div><h2>Operations access required.</h2><p>This workspace is reserved for assigned N.O.R.A operators. Buyer and creator workspaces remain available from your account.</p></section>;
   if (!enabled) return null;
   return <section className="creator-dashboard review-dashboard">
-    <div className="eyebrow">Reviewer workspace</div><h2>Ready for a closer look.</h2>
+    <div className="eyebrow">Operations · review queue</div><h2>Ready for a closer look.</h2>
     <p className="review-intro">Review the outcome, commercial terms, proof, delivery boundary, and technical evidence before placing a record on the shelf.</p>
     {records.length === 0 ? <div className="dashboard-empty"><p>No submitted records are waiting for review.</p></div> : <div className="review-queue">{records.map((record) => <article key={record.id} className="review-record">
       <div className="review-visual">{record.cover_image_url ? <img src={record.cover_image_url} alt={`${record.product_name} preview`} /> : <div>NORA<br />product record</div>}</div>
