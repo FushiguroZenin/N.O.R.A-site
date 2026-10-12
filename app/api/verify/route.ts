@@ -7,14 +7,14 @@ export async function POST(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) return NextResponse.json({ error: "Server verification is not configured" }, { status: 503 });
-  const body = await request.json() as { repository?: string; commit?: string; conclusion?: "success" | "failure"; summary?: string };
+  const body = await request.json() as { repository?: string; commit?: string; conclusion?: "success" | "failure"; summary?: string; runtime?: string };
   if (!body.repository || !body.conclusion) return NextResponse.json({ error: "Repository and conclusion are required" }, { status: 400 });
   const supabase = createClient(url, serviceKey);
   const repositoryUrl = "https://github.com/" + body.repository;
   const { error } = await supabase.from("listing_drafts").update({
     verification_status: body.conclusion === "success" ? "verified" : "failed",
     verification_commit: body.commit ?? null,
-    verification_runtime: "Node 22 · npm",
+    verification_runtime: body.runtime ?? "Declared runner",
     verification_checked_at: new Date().toISOString(),
     verification_summary: body.summary ?? (body.conclusion === "success" ? "Clean install and build passed." : "NORA Verify failed. Inspect the GitHub workflow log."),
   }).eq("repository_url", repositoryUrl);

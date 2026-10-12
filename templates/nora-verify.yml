@@ -34,4 +34,4 @@ jobs:
           curl --fail-with-body --request POST "$NORA_VERIFY_ENDPOINT" \
             --header "Content-Type: application/json" \
             --header "x-nora-verify-secret: $NORA_VERIFY_WEBHOOK_SECRET" \
-            --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"$NORA_CONCLUSION\"}"
+          --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"$NORA_CONCLUSION\",\"runtime\":\"Node 22 · npm\",\"summary\":\"Clean dependency install and configured build completed.\"}"
