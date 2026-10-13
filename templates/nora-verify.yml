@@ -14,6 +14,18 @@ jobs:
         if: ${{ hashFiles('package.json') != '' }}
         with:
           node-version: 22
+      - name: Mark verification in progress
+        env:
+          NORA_VERIFY_ENDPOINT: ${{ secrets.NORA_VERIFY_ENDPOINT }}
+          NORA_VERIFY_WEBHOOK_SECRET: ${{ secrets.NORA_VERIFY_WEBHOOK_SECRET }}
+          NORA_REPOSITORY: ${{ github.repository }}
+          NORA_COMMIT: ${{ github.sha }}
+          NORA_WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl --fail-with-body --request POST "$NORA_VERIFY_ENDPOINT" \
+            --header "Content-Type: application/json" \
+            --header "x-nora-verify-secret: $NORA_VERIFY_WEBHOOK_SECRET" \
+            --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"pending\",\"runtime\":\"Node 22 · npm\",\"workflowUrl\":\"$NORA_WORKFLOW_URL\",\"summary\":\"NORA Verify is running for this commit.\"}"
       - name: Verify Node application
         if: ${{ hashFiles('package.json') != '' }}
         run: |
@@ -30,8 +42,9 @@ jobs:
           NORA_CONCLUSION: ${{ job.status }}
           NORA_REPOSITORY: ${{ github.repository }}
           NORA_COMMIT: ${{ github.sha }}
+          NORA_WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           curl --fail-with-body --request POST "$NORA_VERIFY_ENDPOINT" \
             --header "Content-Type: application/json" \
             --header "x-nora-verify-secret: $NORA_VERIFY_WEBHOOK_SECRET" \
-          --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"$NORA_CONCLUSION\",\"runtime\":\"Node 22 · npm\",\"summary\":\"Clean dependency install and configured build completed.\"}"
+          --data "{\"repository\":\"$NORA_REPOSITORY\",\"commit\":\"$NORA_COMMIT\",\"conclusion\":\"$NORA_CONCLUSION\",\"runtime\":\"Node 22 · npm\",\"workflowUrl\":\"$NORA_WORKFLOW_URL\",\"summary\":\"Clean dependency install and configured build completed.\"}"
