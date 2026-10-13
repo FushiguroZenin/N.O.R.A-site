@@ -1,0 +1,271 @@
+NORA PROJECT NOTES
+==================
+
+Purpose and positioning
+-----------------------
+NORA (Network of Reusable Applications) is an outcome-first software marketplace. It replaces the proposal-first freelance loop with product records for software that already exists. Creators publish applications, tools, runtimes, and scoped integrations; buyers inspect proof, delivery, buyer readiness, price, licence context, and technical boundaries before requesting or acquiring work.
+
+Tagline: Sell the work. Skip the pitch.
+
+NORA treats useful software as inventory, not a promise of future labour. It is neither a generic freelancer directory nor a template dump. Every listing is intended to be a structured reusable outcome with a defined delivery path.
+
+Live deployment
+---------------
+Production: https://nora-marketplace.vercel.app
+Repository: https://github.com/FushiguroZenin/N.O.R.A-site
+Deployment: Vercel, production branch main
+Database and authentication: Supabase project ocelqwczoxtmwkcfklbq
+
+Public marketplace
+------------------
+- Editorial home page with the "Sell the work. Skip the pitch." proposition, one-time hero motion, rotating featured applications, and creator invitation.
+- /catalogue is a searchable, filterable unified feed for curated NORA records and approved creator releases. It filters delivery model and product type.
+- The initial curated catalogue contains Dera 1.6, Ruby, Neptune, Pluto, Moon, and Lina. Creator-published records use this same catalogue rather than a separate feed.
+- Curated product records live at /products/*. Generated creator records use /listing?id=<record-id>.
+- Cards and product pages surface delivery, intended buyer, commercial terms or price, release version, preview imagery, and a decision-focused summary.
+- Curated records and creator records can expose a "Try it first" proof environment: live demo, interactive sandbox, guided walkthrough, or technical evidence.
+- Proof preflight checks declared source structure and requires a safe-demo-data confirmation for non-technical proof environments.
+- The buyer-facing "Can you run this?" panel distinguishes Ready to use, Ready to deploy, and Developer required products. It can declare expected setup time, services, environment variables, and a fixed-scope creator setup option.
+- Creators can upload a cover image and up to four gallery images. NORA falls back to default visuals if none are supplied.
+- Optional external YouTube, Vimeo, or Loom walkthrough links are supported.
+- The global footer links About, Licensing, Contact, Terms, GitHub, email, and LinkedIn.
+- Responsive layout converts the desktop side rail into compact navigation on smaller screens.
+
+Accounts and access
+-------------------
+- Supabase passwordless email authentication using magic links.
+- Public browsing remains open; draft saving, work submission, saving products, and acquisition requests require an account.
+- Signed-out actions go to /account and return a person to the task they were attempting after authentication.
+- /join separates buyer and creator entry points without splitting the marketplace.
+- /account is the shared overview. There are focused Buyer, Creator, and Operations workspaces.
+- /account/operations is restricted to profiles.is_operator. /account/review redirects to operations for compatibility.
+- Notifications are currently in-app. Listing status changes and acquisition activity create account feed items. Transactional email has not been connected.
+
+Creator workflow
+----------------
+- /submit is a four-stage builder: 01 Description, 02 Proof, 03 Details, 04 Delivery.
+- Creators can save a draft, return to Creator Studio, edit it, submit it, attach release metadata, upload a private source bundle, and irreversibly delete a record after confirmation.
+- Records capture outcome, type, delivery, preview/proof URLs, public repository URL, price, licence, included items, requirements, support boundary, buyer readiness, compatibility/dependency notes, and release version.
+- Builder placeholders cover common URL, GitHub, dependency, and delivery values.
+- Preflight validates names, outcome, price/terms, preview, proof, safe demo declaration, readiness, environment details, requirements, boundaries, included items, and technical verification where appropriate.
+- Private source bundles accept ZIP, TGZ, and TAR.GZ, capped at 100 MB. They remain private until a buyer entitlement is granted.
+- Creator Studio shows drafts, current state, operator feedback, technical verification, release management, routed buyer requests, and connected catalogue records.
+
+Technical verification and the publication gate
+------------------------------------------------
+NORA Verify is the working automated trust loop.
+
+1. A creator saves a record with a public GitHub repository URL.
+2. That repository runs the NORA GitHub Actions workflow on push or manually.
+3. The workflow posts a signed result to POST /api/verify.
+4. NORA stores status, repository, commit SHA, runtime, checked time, summary, and workflow URL against matching listing records.
+5. Creator Studio displays the report. Operations sees the same report directly in the review queue.
+6. A repository-backed listing can only enter Operations review when the exact currently linked repository has a successful report.
+7. An operator can only publish a submitted listing when that report is current and verified.
+
+Verification states are: unverified, pending, verified, failed, stale.
+
+Changing a verified record's repository URL marks the report stale. Current templates post a pending state as a run begins, then update it to success or failure after checks finish. This avoids presenting an old green run as current while a new commit is being tested.
+
+NORA retains manual operator approval. A passing build is proof of the declared runner outcome; it does not automatically establish commercial quality, buyer fit, legal rights, or publication readiness.
+
+Templates:
+- templates/nora-verify.yml: Node applications (install/build) and vanilla static sites (index.html check).
+- templates/nora-verify-python.yml: Python 3.12 projects, requirements.txt installation, and compileall.
+
+Confirmed end-to-end example: FushiguroZenin/olive-ai successfully completed GitHub Action -> signed NORA API callback -> Supabase listing update -> Creator Studio verification evidence.
+
+Current verification limits:
+- Reports are authenticated by a creator-installed workflow with a shared webhook secret.
+- There is no GitHub App identity, private-repository support, isolated archive extraction, malware scanning, SAST/SCA, dependency licence scan, CVE policy, or scheduled maintenance/drift monitoring yet.
+- Future trust work should use GitHub App identity, isolated runners, immutable run metadata, secret scanning, SBOM/licence analysis, vulnerability policy, and periodic dependency checks.
+
+Operations, review, and fulfilment
+----------------------------------
+- Operators are assigned with profiles.is_operator; there is no public role-selector.
+- supabase/operator-access.sql moves prototype reviewers into the operator role and updates policies.
+- Operators inspect submitted records, their proof, commercial terms, delivery boundary, repository, and verification report.
+- They can publish a verified record or return it with an actionable note. Submission and publication gates are enforced by Supabase functions, not just browser buttons.
+- Operators control manual fulfilment until payments are integrated. They can grant or revoke buyer entitlements after payment and terms have been confirmed outside NORA.
+
+Acquisition and private delivery
+--------------------------------
+- /acquire is product-aware: buyers see the product, delivery model, price context, and requested terms before sending a structured request.
+- Requests are stored in Supabase, visible to the buyer, and routed to the owning creator's inbox.
+- Creator reply preparation offers copyable recipient, subject, and message fields instead of relying only on a mailto handler.
+- Bundles are never public. A manual operator entitlement exposes a short-lived private source-bundle link in the buyer workspace.
+- Paystack is intended to replace off-platform payment confirmation and manual entitlement granting.
+
+Routes
+------
+/                         Home and featured applications
+/catalogue                Searchable, filterable marketplace
+/products/*               Curated NORA product records
+/listing?id=<record-id>   Generated creator listing
+/submit                   Creator four-stage record builder
+/acquire                  Product-aware acquisition request
+/join                     Buyer or creator entry choice
+/account                  Authentication and shared overview
+/account/buyer            Saved products and acquisition requests
+/account/creator          Records, releases, inbox, ownership controls
+/account/operations       Restricted review and fulfilment workspace
+/account/review           Compatibility redirect to operations
+/about                    Marketplace manifesto
+/licensing                Licensing and delivery guide
+/terms                    Prototype marketplace terms
+/contact                  Contact handoff
+/api/verify               Signed GitHub Actions verification endpoint
+
+Technical stack
+---------------
+- Next.js App Router, React, and TypeScript
+- Framer Motion
+- Supabase Auth, Postgres, Row Level Security, and Storage
+- GitHub Actions and GitHub REST API for public evidence
+- Vercel production deployment and server route handling
+- Plain CSS design system with custom properties and responsive media queries
+
+Important: next.config.ts must not use output: "export". NORA needs the Vercel server route /api/verify. A static export removes route handlers and causes the GitHub callback to return 404.
+
+Project structure
+-----------------
+app/
+  account/                 Buyer, creator, and operations workspaces
+  api/verify/              Signed GitHub Actions webhook handler
+  acquire/                 Acquisition request flow
+  catalogue/               Public catalogue
+  join/                    Buyer/creator entry choice
+  listing/                 Generated creator listing route
+  products/                Curated NORA product records
+  submit/                  Creator record builder
+  about/ licensing/ terms/ contact/
+
+components/
+  account-auth.tsx         Magic-link flow and return routing
+  catalogue-marketplace.tsx Unified curated + published feed
+  listing-builder.tsx      Four-stage builder
+  creator-dashboard.tsx    Records, inbox, verification report, deletion
+  review-dashboard.tsx     Operator report, publish/change request
+  fulfilment-dashboard.tsx Operator entitlement control
+  release-manager.tsx      Release metadata and private source bundle
+  buyer-readiness.tsx      Buyer-facing setup contract
+  proof-experience.tsx     Buyer-facing proof environment
+  public-listing-page.tsx  Generated product record
+  acquisition-form.tsx     Buyer request
+  notification-centre.tsx  Account activity feed
+
+lib/
+  catalogue.ts             Curated product metadata
+  listing-preflight.ts     Completeness rules
+  proof-environment.ts     Proof structural validation
+  pricing.ts               Commercial term formatting
+  supabase.ts              Browser client
+
+SQL migrations and templates
+----------------------------
+supabase/
+  schema.sql               Base profiles and listing drafts
+  acquisition-requests.sql Buyer request records
+  request-contact.sql      Buyer contact details for creator routing
+  creator-routing.sql      Creator ownership/request routing
+  review-workspace.sql     Original reviewer prototype
+  operator-access.sql      Operator role migration and policies
+  review-feedback.sql      Feedback and publication functions
+  public-listings.sql      Publication/public read support
+  listing-pricing.sql      Price and commercial context
+  listing-media.sql        Cover image + Storage policies
+  listing-gallery.sql      Gallery URLs
+  release-metadata.sql     Version and release declaration
+  fulfilment.sql           Private source bundles and buyer entitlements
+  manual-fulfilment.sql    Operator grant/revoke operations
+  buyer-readiness.sql      Setup declarations
+  proof-environments.sql   Creator proof declarations
+  saved-products.sql       Buyer shortlist
+  delete-listing.sql       Irreversible creator deletion RPC
+  technical-evidence.sql   Repository evidence fields
+  nora-verify.sql          Initial verification fields
+  verification-gates.sql   Fresh verification gate, RPC, hardened policies
+  notifications.sql        In-app notifications/status triggers
+
+templates/
+  nora-verify.yml          Node/vanilla GitHub Actions starter
+  nora-verify-python.yml   Python GitHub Actions starter
+
+Vercel and Supabase configuration
+---------------------------------
+Vercel Production variables:
+
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
+NORA_VERIFY_WEBHOOK_SECRET
+
+SUPABASE_SERVICE_ROLE_KEY and NORA_VERIFY_WEBHOOK_SECRET are server-side secrets. Never commit them, expose them through NEXT_PUBLIC_ variables, include them in public documentation, or paste them into public issue threads. Redeploy Vercel after changing variables.
+
+Supabase Auth redirects:
+
+https://nora-marketplace.vercel.app/account
+http://localhost:3000/account
+
+Each creator repository using NORA Verify needs these GitHub Actions secrets:
+
+NORA_VERIFY_ENDPOINT=https://nora-marketplace.vercel.app/api/verify
+NORA_VERIFY_WEBHOOK_SECRET=<same private secret configured in Vercel>
+
+Local development
+-----------------
+Prerequisites: Node.js compatible with installed Next.js, npm, and a Supabase project with migrations applied.
+
+  npm install
+  npm run dev
+
+Open http://localhost:3000.
+
+Checks:
+
+  npx tsc --noEmit --incremental false
+  npm run build
+
+If Windows reports EPERM for .next or tsconfig.tsbuildinfo, stop the local dev server before building. That is a local file-lock issue, not necessarily a compilation failure.
+
+Migration order
+---------------
+Apply schema.sql first, then supporting requests/routing/review/publication files in dependency order. The current complete product needs at least:
+
+- listing-media.sql
+- listing-gallery.sql
+- review-feedback.sql
+- operator-access.sql
+- release-metadata.sql
+- fulfilment.sql
+- manual-fulfilment.sql
+- buyer-readiness.sql
+- proof-environments.sql
+- technical-evidence.sql
+- nora-verify.sql
+- verification-gates.sql
+- notifications.sql
+
+Current boundaries and future work
+---------------------------------
+Not yet implemented:
+- Paystack checkout, creator payouts, invoices, tax handling, automated refunds, or payment-webhook fulfilment.
+- Google/GitHub sign-in, GitHub OAuth, GitHub App connection, or private-repository checking.
+- Isolated archive verification, lockfile/security/CVE/open-source-licence scans, secret scanning, SAST, and dependency-drift alerts.
+- One-click buyer clone/deploy for GitHub, Vercel, Render, or similar hosting.
+- In-app messaging, email notifications, disputes, complete audit trail, legal review, and enforceable marketplace agreements.
+- Creator merit metrics: build success rate, coverage, active deployments, and verified dependency updates.
+- Modular architecture contracts, multi-contributor royalty splits, and fixed-price add-on/customisation requests.
+
+Next commercial milestone:
+fixed-price checkout -> explicit licence acceptance -> payment confirmation -> automatic entitlement grant -> protected source-bundle delivery.
+
+Product principles
+------------------
+- Outcome first: sell what the software does, not vague availability.
+- Proof before promise: show that work exists before a buyer reaches out.
+- Clear boundaries: make delivery, requirements, support, ownership, versioning, and exclusions legible.
+- No proposal theatre: no bidding race for an undefined brief.
+- Reusable work deserves product treatment: independent software should be able to earn more than once.
+
+NORA is being shaped into a calmer, clearer way to discover and acquire independent software: make the thing, sell the thing.
