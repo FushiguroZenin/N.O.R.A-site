@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatPrice, type PriceMode } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase";
+import { queueNoraEmail } from "@/lib/email-client";
 
 type Submission = {
   id: string; product_name: string; product_type: string; outcome: string; delivery: string;
@@ -36,13 +37,13 @@ export function ReviewDashboard() {
   const approve = async (id: string) => {
     const { error } = await supabase.rpc("publish_listing", { p_listing_id: id });
     setNote(error ? error.message : "Record approved and added to the public catalogue.");
-    if (!error) load();
+    if (!error) { void queueNoraEmail("listing-status", id); load(); }
   };
 
   const requestChanges = async (id: string) => {
     const { error } = await supabase.rpc("return_listing_for_changes", { p_listing_id: id, p_review_note: feedback });
     setNote(error ? error.message : "Specific feedback sent. The record is back with its creator.");
-    if (!error) { setReturningId(undefined); setFeedback(""); load(); }
+    if (!error) { void queueNoraEmail("listing-status", id); setReturningId(undefined); setFeedback(""); load(); }
   };
 
   if (accessDenied) return <section className="creator-dashboard dashboard-empty"><div className="eyebrow">Operations</div><h2>Operations access required.</h2><p>This workspace is reserved for assigned N.O.R.A operators. Buyer and creator workspaces remain available from your account.</p></section>;

@@ -28,7 +28,7 @@ Public marketplace
 - The buyer-facing "Can you run this?" panel distinguishes Ready to use, Ready to deploy, and Developer required products. It can declare expected setup time, services, environment variables, and a fixed-scope creator setup option.
 - Creators can upload a cover image and up to four gallery images. NORA falls back to default visuals if none are supplied.
 - Optional external YouTube, Vimeo, or Loom walkthrough links are supported.
-- The global footer links About, Licensing, Contact, Terms, GitHub, email, and LinkedIn.
+- The global footer links About, Licensing, Contact, Terms, Privacy, GitHub, email, and LinkedIn.
 - Responsive layout converts the desktop side rail into compact navigation on smaller screens.
 
 Accounts and access
@@ -39,7 +39,7 @@ Accounts and access
 - /join separates buyer and creator entry points without splitting the marketplace.
 - /account is the shared overview. There are focused Buyer, Creator, and Operations workspaces.
 - /account/operations is restricted to profiles.is_operator. /account/review redirects to operations for compatibility.
-- Notifications are currently in-app. Listing status changes and acquisition activity create account feed items. Transactional email has not been connected.
+- Notifications are in-app. Transactional email is provider-ready for request, review, and entitlement events, but remains inactive until a verified Resend sender is configured.
 
 Creator workflow
 ----------------
@@ -253,7 +253,7 @@ Not yet implemented:
 - Google/GitHub sign-in, GitHub OAuth, GitHub App connection, or private-repository checking.
 - Isolated archive verification, lockfile/security/CVE/open-source-licence scans, secret scanning, SAST, and dependency-drift alerts.
 - One-click buyer clone/deploy for GitHub, Vercel, Render, or similar hosting.
-- In-app messaging, email notifications, disputes, complete audit trail, legal review, and enforceable marketplace agreements.
+- In-app messaging, disputes, legal review, and enforceable marketplace agreements.
 - Creator merit metrics: build success rate, coverage, active deployments, and verified dependency updates.
 - Modular architecture contracts, multi-contributor royalty splits, and fixed-price add-on/customisation requests.
 
@@ -269,3 +269,27 @@ Product principles
 - Reusable work deserves product treatment: independent software should be able to earn more than once.
 
 NORA is being shaped into a calmer, clearer way to discover and acquire independent software: make the thing, sell the thing.
+
+v1 hardening update — October 2026
+----------------------------------
+
+Run these new SQL files in the Supabase SQL Editor after the earlier schema migrations:
+
+1. `supabase/v1-operations-hardening.sql` — protected release updates, creator request transitions, entitlement audit trail, and the operator activity log.
+2. `supabase/bundle-hardening.sql` — enforces the private delivery bucket and a 100 MB bundle ceiling.
+
+### Email delivery (optional until the sender is ready)
+
+NORA already has in-app notifications. Provider email is now wired for acquisition requests, buyer-conversation updates, listing review outcomes, and release access grants. It remains safely inactive until the following Vercel environment variables are set:
+
+- `RESEND_API_KEY`
+- `NORA_EMAIL_FROM` — a sender address on a domain verified in Resend, for example `NORA <updates@yourdomain.com>`.
+
+Add both to Production (and Preview if desired), then redeploy. Do not put their real values in GitHub, documentation, or `.env.example`.
+
+### What is intentionally still manual
+
+- Paystack checkout, payment confirmation, refunds, and automatic entitlement grants.
+- Legal review of the launch Terms and Privacy notice.
+- Sender-domain verification with an email provider.
+- Automated security scanning and archive extraction in isolated runners.

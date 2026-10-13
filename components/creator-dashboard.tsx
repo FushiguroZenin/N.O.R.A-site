@@ -8,6 +8,7 @@ import { validateProof, type ProofType } from "@/lib/proof-environment";
 import { supabase } from "@/lib/supabase";
 import { ReplySheet } from "@/components/reply-sheet";
 import { RecordStatusTimeline } from "@/components/record-status-timeline";
+import { queueNoraEmail } from "@/lib/email-client";
 
 type Draft = { id: string; product_name: string; product_type: string; delivery: string; status: "draft" | "submitted" | "changes_requested" | "published"; review_note: string | null; repository_url: string | null; verification_status: "unverified" | "pending" | "verified" | "failed" | "stale" | null; verification_repository_url: string | null; verification_commit: string | null; verification_runtime: string | null; verification_checked_at: string | null; verification_summary: string | null; verification_workflow_url: string | null; updated_at: string };
 type Request = { id: string; product_name: string; delivery: string; terms_requested: string; price_context: string | null; intended_use: string; organisation: string | null; buyer_name: string | null; buyer_email: string | null; status: "sent" | "in_conversation" | "acquired" | "closed"; created_at: string };
@@ -54,7 +55,11 @@ export function CreatorDashboard() {
     if (!error) load();
   };
   const claim = async (slug: string) => { const { error } = await supabase.rpc("claim_catalogue_record", { p_product_slug: slug }); setClaimNote(error ? error.message : "Catalogue record connected. Existing requests are now in your inbox."); if (!error) load(); };
-  const updateRequest = async (id: string, status: Request["status"]) => { await supabase.from("acquisition_requests").update({ status, updated_at: new Date().toISOString() }).eq("id", id); load(); };
+  const updateRequest = async (id: string, status: Request["status"]) => {
+    const { error } = await supabase.rpc("update_creator_request_status", { p_request_id: id, p_status: status });
+    if (error) setClaimNote(error.message);
+    else { void queueNoraEmail("request-status", id); load(); }
+  };
   const deleteRecord = async () => {
     if (!deleting) return;
     const { error } = await supabase.rpc("delete_listing_record", { p_listing_id: deleting.id });
@@ -74,7 +79,7 @@ export function CreatorDashboard() {
     </section>
     <section className="creator-dashboard creator-inbox">
       <div className="eyebrow">Creator inbox</div><h2>Requests for your work.</h2>
-      {requests.length === 0 ? <div className="dashboard-empty"><p>Connect a current catalogue record below. Buyer requests for it will arrive here.</p></div> : <div className="draft-list">{requests.map((request) => <article key={request.id}><div><span className={`draft-status ${request.status === "sent" ? "submitted" : ""}`}>{request.status.replace("_", " ")}</span><h3>{request.product_name}</h3><p>{request.delivery} · {request.terms_requested}</p><p className="request-intent">{request.intended_use}</p>{request.organisation && <p>{request.organisation}</p>}{request.buyer_email && <p className="request-contact">From {request.buyer_name || "NORA buyer"} · {request.buyer_email}</p>}</div><div className="draft-actions">{request.buyer_email && <button className="reply-link" onClick={() => { setReplyingTo(request); updateRequest(request.id, "in_conversation"); }}>Prepare reply</button>}<button onClick={() => updateRequest(request.id, "closed")}>Close</button></div></article>)}</div>}
+      {requests.length === 0 ? <div className="dashboard-empty"><p>Connect a current catalogue record below. Buyer requests for it will arrive here.</p></div> : <div className="draft-list">{requests.map((request) => <article key={request.id}><div><span className={`draft-status ${request.status === "sent" ? "submitted" : ""}`}>{request.status.replace("_", " ")}</span><h3>{request.product_name}</h3><p>{request.delivery} · {request.terms_requested}</p><p className="request-intent">{request.intended_use}</p>{request.organisation && <p>{request.organisation}</p>}{request.buyer_email && <p className="request-contact">From {request.buyer_name || "NORA buyer"} · {request.buyer_email}</p>}</div><div className="draft-actions">{request.status !== "closed" && request.buyer_email && <button className="reply-link" onClick={() => { setReplyingTo(request); if (request.status === "sent") updateRequest(request.id, "in_conversation"); }}>Prepare reply</button>}{request.status !== "closed" && <button onClick={() => updateRequest(request.id, "closed")}>Close</button>}</div></article>)}</div>}
     </section>
     <section className="creator-dashboard catalogue-connection">
       <div className="eyebrow">Current catalogue</div><h2>Connect the work you own.</h2><p>One-time setup for an existing NORA record. This routes its buyer requests into your inbox.</p>

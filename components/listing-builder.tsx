@@ -36,8 +36,11 @@ export function ListingBuilder() {
   const save = async (submit: boolean) => {
     const incomplete = submit && missingStage();
     if (incomplete) { setStage(incomplete); setNote("Complete the required information in this step before submitting to NORA."); return; }
-    setSaving(true); const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.assign("/account"); return; }
+    setSaving(true);
+    if (values.bundle && !/\.(zip|tgz|tar\.gz)$/i.test(values.bundle.name)) { setNote("Upload a .zip, .tgz, or .tar.gz source bundle."); setSaving(false); return; }
+    if (values.bundle && values.bundle.size > 100 * 1024 * 1024) { setNote("Keep a release bundle below 100 MB for this first delivery flow."); setSaving(false); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); window.location.assign("/account"); return; }
     const payload = { product_name: values.name || "Untitled product", outcome: values.outcome, product_type: values.type, delivery: values.delivery, preview_url: values.preview || null, repository_url: values.repository || null, price_mode: values.price ? "fixed" : "quote", price_amount: values.price ? Number(values.price) : null, proof_type: "Live demo", proof_url: values.proof || null, readiness_level: values.readiness, setup_time: values.setup || null, requirements: values.requirements.split("\\n").filter(Boolean), boundary: values.boundary.split("\\n").filter(Boolean), included: values.included.split("\\n").filter(Boolean), release_version: values.version, licence_name: values.licence, dependency_notes: values.dependencies || null, updated_at: new Date().toISOString() };
     const result = draftId ? await supabase.from("listing_drafts").update(payload).eq("id", draftId).eq("creator_id", user.id).select("id").single() : await supabase.from("listing_drafts").insert({ ...payload, creator_id: user.id }).select("id").single();
     if (result.error || !result.data) { setNote(result.error?.message || "NORA could not save this record."); setSaving(false); return; }
@@ -46,7 +49,8 @@ export function ListingBuilder() {
       const name = values.bundle.name.replace(/[^a-zA-Z0-9._-]/g, "-"); const path = user.id + "/" + result.data.id + "/" + Date.now() + "-" + name;
       const upload = await supabase.storage.from("nora-delivery").upload(path, values.bundle, { contentType: values.bundle.type || "application/octet-stream" });
       if (upload.error) { setNote("Record saved, but the bundle could not upload: " + upload.error.message); setSaving(false); return; }
-      await supabase.from("listing_drafts").update({ source_bundle_path: path, source_bundle_name: values.bundle.name, source_bundle_size: values.bundle.size }).eq("id", result.data.id);
+      const { error: bundleSaveError } = await supabase.from("listing_drafts").update({ source_bundle_path: path, source_bundle_name: values.bundle.name, source_bundle_size: values.bundle.size }).eq("id", result.data.id);
+      if (bundleSaveError) { setNote("Bundle uploaded, but NORA could not attach it to this draft: " + bundleSaveError.message); setSaving(false); return; }
     }
     if (submit) {
       const { error: submissionError } = await supabase.rpc("submit_listing_for_review", { p_listing_id: result.data.id });

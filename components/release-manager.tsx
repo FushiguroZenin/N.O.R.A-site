@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 type RecordOption = { id: string; product_name: string; status: string; source_bundle_name: string | null; source_bundle_size: number | null };
 type Release = { release_version: string; release_notes: string; tested_environment: string; dependency_notes: string; licence_name: string; delivery_contents: string[] };
+type BundleFields = { source_bundle_path?: string; source_bundle_name?: string; source_bundle_size?: number };
 const empty: Release = { release_version: "", release_notes: "", tested_environment: "", dependency_notes: "", licence_name: "", delivery_contents: [] };
 
 const displayBytes = (bytes: number | null) => {
@@ -20,7 +21,7 @@ export function ReleaseManager() {
   const save = async (event: FormEvent) => {
     event.preventDefault(); if (!selected) return; setSaving(true); setNote("");
     const { data: { user } } = await supabase.auth.getUser(); if (!user) { setSaving(false); return; }
-    const record = records.find(item => item.id === selected); let bundleFields = {};
+    const record = records.find(item => item.id === selected); let bundleFields: BundleFields = {};
     if (bundle) {
       if (!/\.(zip|tgz|tar\.gz)$/i.test(bundle.name)) { setNote("Upload a .zip, .tgz, or .tar.gz source bundle."); setSaving(false); return; }
       if (bundle.size > 100 * 1024 * 1024) { setNote("Keep a release bundle below 100 MB for this first delivery flow."); setSaving(false); return; }
@@ -30,7 +31,18 @@ export function ReleaseManager() {
       bundleFields = { source_bundle_path: path, source_bundle_name: bundle.name, source_bundle_size: bundle.size };
       if (record?.source_bundle_name) setRecords(current => current.map(item => item.id === selected ? { ...item, source_bundle_name: bundle.name, source_bundle_size: bundle.size } : item));
     }
-    const { error } = await supabase.from("listing_drafts").update({ ...release, ...bundleFields, delivery_contents: release.delivery_contents.filter(Boolean), released_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", selected).eq("creator_id", user.id);
+    const { error } = await supabase.rpc("save_listing_release", {
+      p_listing_id: selected,
+      p_release_version: release.release_version,
+      p_release_notes: release.release_notes,
+      p_tested_environment: release.tested_environment,
+      p_dependency_notes: release.dependency_notes,
+      p_licence_name: release.licence_name,
+      p_delivery_contents: release.delivery_contents.filter(Boolean),
+      p_source_bundle_path: bundleFields.source_bundle_path ?? null,
+      p_source_bundle_name: bundleFields.source_bundle_name ?? null,
+      p_source_bundle_size: bundleFields.source_bundle_size ?? null,
+    });
     setNote(error ? error.message : bundle ? "Release details and private source bundle saved. Buyers need an entitlement before they can download it." : "Release details saved to this product record."); setSaving(false);
   };
   if (!records.length) return <section className="creator-dashboard release-manager"><div className="eyebrow">Release record</div><h2>Prepare a release after approval.</h2><p>Once NORA approves a product record, it will appear here for its private source bundle and version details.</p></section>;
