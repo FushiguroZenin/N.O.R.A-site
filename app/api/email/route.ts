@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-type EmailEvent = "request-created" | "request-status" | "listing-status" | "entitlement";
-const allowedEvents = new Set<EmailEvent>(["request-created", "request-status", "listing-status", "entitlement"]);
+type EmailEvent = "request-created" | "request-status" | "listing-status" | "entitlement" | "support-ticket" | "support-update";
+const allowedEvents = new Set<EmailEvent>(["request-created", "request-status", "listing-status", "entitlement", "support-ticket", "support-update"]);
 
 type AdminClient = { auth: { admin: { getUserById: (id: string) => Promise<{ data: { user: { email?: string | null } | null } }> } } };
 async function userEmail(admin: AdminClient, id: string | null) {
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   const from = process.env.NORA_EMAIL_FROM;
+  const supportEmail = process.env.NORA_SUPPORT_EMAIL;
   if (!url || !publicKey || !serviceKey) return NextResponse.json({ error: "Email service is unavailable" }, { status: 503 });
   if (!resendKey || !from) return NextResponse.json({ configured: false, message: "Email notifications are not configured yet." });
 
@@ -34,7 +35,21 @@ export async function POST(request: NextRequest) {
   let subject = "NORA update";
   let message = "There is an update in your NORA workspace.";
 
-  if (body.event === "listing-status") {
+  if (body.event === "support-ticket" || body.event === "support-update") {
+    const { data: ticket } = await admin.from("support_tickets").select("subject,status,reporter_id,operator_note").eq("id", body.id).maybeSingle();
+    if (!ticket) return NextResponse.json({ error: "Support ticket not found" }, { status: 404 });
+    if (body.event === "support-ticket") {
+      if (ticket.reporter_id !== auth.user.id) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+      to = supportEmail ?? null;
+      subject = `NORA support — ${ticket.subject}`;
+      message = `A new support request needs review: “${ticket.subject}”. Open the Operations workspace to respond.`;
+    } else {
+      if (!profile?.is_operator) return NextResponse.json({ error: "Operator access is required" }, { status: 403 });
+      to = await userEmail(admin, ticket.reporter_id);
+      subject = `NORA support update — ${ticket.subject}`;
+      message = `Your support request is now ${ticket.status.replace(/_/g, " ")}.${ticket.operator_note ? ` NORA: ${ticket.operator_note}` : ""}`;
+    }
+  } else if (body.event === "listing-status") {
     if (!profile?.is_operator) return NextResponse.json({ error: "Operator access is required" }, { status: 403 });
     const { data: listing } = await admin.from("listing_drafts").select("product_name,status,creator_id,review_note").eq("id", body.id).maybeSingle();
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });

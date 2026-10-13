@@ -284,6 +284,7 @@ NORA already has in-app notifications. Provider email is now wired for acquisiti
 
 - `RESEND_API_KEY`
 - `NORA_EMAIL_FROM` — a sender address on a domain verified in Resend, for example `NORA <updates@yourdomain.com>`.
+- `NORA_SUPPORT_EMAIL` — the inbox that should receive new support-ticket alerts.
 
 Add both to Production (and Preview if desired), then redeploy. Do not put their real values in GitHub, documentation, or `.env.example`.
 
@@ -293,3 +294,17 @@ Add both to Production (and Preview if desired), then redeploy. Do not put their
 - Legal review of the launch Terms and Privacy notice.
 - Sender-domain verification with an email provider.
 - Automated security scanning and archive extraction in isolated runners.
+
+Release snapshots, support, and monitoring — October 2026
+----------------------------------------------------------
+
+Run these SQL files after `v1-operations-hardening.sql`:
+
+1. `supabase/release-snapshots.sql` — creates immutable release snapshots and locks every buyer entitlement to the exact version and private bundle granted.
+2. `supabase/support-controls.sql` — creates the signed-in support/report queue, operator resolution notes, and reasonable anti-spam limits for support and acquisition requests.
+
+The Buyer workspace now downloads the snapshot named in the buyer's entitlement, not a creator's later replacement bundle. Old private files must therefore remain in storage while buyers have access.
+
+Vercel Web Analytics and sampled Speed Insights are included in the application for the current private alpha. The sample rate for Speed Insights is 20% to minimise client-side telemetry. Vercel documents free Hobby allocations for Web Analytics and Speed Insights, but also describes Hobby as personal/non-commercial; review the hosting plan before a commercial public launch.
+
+`LEGAL LAUNCH CHECKLIST.md` is a briefing list for counsel. It does not replace a lawyer or make the existing Terms/Privacy text legally approved.

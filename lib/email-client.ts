@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 
-export type NoraEmailEvent = "request-created" | "request-status" | "listing-status" | "entitlement";
+export type NoraEmailEvent = "request-created" | "request-status" | "listing-status" | "entitlement" | "support-ticket" | "support-update";
 
 export async function queueNoraEmail(event: NoraEmailEvent, id: string) {
   try {
