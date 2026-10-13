@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Activity = { id: string; action: string; resource_type: string; metadata: { product_name?: string; version?: string }; created_at: string };
-const labels: Record<string, string> = { "listing.published": "Published a record", "listing.changes_requested": "Returned a record for changes", "release.updated": "Updated a private release", "request.in_conversation": "Opened a buyer conversation", "request.closed": "Closed a buyer conversation", "entitlement.granted": "Granted private download access", "entitlement.revoked": "Revoked private download access" };
+const labels: Record<string, string> = { "listing.published": "Published a record", "listing.changes_requested": "Returned a record for changes", "listing.suspended": "Took a record off the shelf", "listing.restored": "Restored a record to the shelf", "release.updated": "Updated a private release", "request.in_conversation": "Opened a buyer conversation", "request.closed": "Closed a buyer conversation", "entitlement.granted": "Granted private download access", "entitlement.revoked": "Revoked private download access", "account.deletion_requested": "Received an account-closure request", "account.deletion_in_review": "Reviewed an account-closure request", "account.deletion_closed": "Closed an account-closure request", "account.suspended": "Suspended an account", "account.active": "Restored an account" };
 
 export function OperationsActivity() {
   const [items, setItems] = useState<Activity[]>([]); const [enabled, setEnabled] = useState(false);
